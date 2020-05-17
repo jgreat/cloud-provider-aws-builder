@@ -1,0 +1,83 @@
+name: Build AWS CCM Artifacts
+
+on:
+  repository_dispatch: {}
+  schedule:
+    - cron: "0 14 * * *"
+  push:
+    branches:
+      - master
+
+# Clone my fork
+# Add upstream remote
+# Pull upstream
+# If changes
+#  docker build/publish
+#  chart build/publish
+#  update my fork
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Clone fork and compare to upstream.
+      run: |
+        mkdir -p fork
+        cd fork
+        git clone https://github.com/jgreat/cloud-provider-aws.git
+        git remote add upstream https://github.com/kubernetes/cloud-provider-aws.git
+        git pull upstream master
+        AHEAD=$(git status --porcelain -b | grep ahead || true)
+        if [[ "$AHEAD" != "" ]]; then echo "::set-output name=ahead::true"; fi
+
+    - name: Setup Environment
+      if: ${{ output.ahead == "true" }}
+      run: |
+        cd fork
+        COMMIT_DATE=$(git --no-pager log -1 --format=%cd --date=format:%Y%m%d.%H%M%S)
+        VERSION="0.0.0-$COMMIT_DATE"
+        echo "::set-env name=VERSION::$VERSION"
+        cd -
+        mkdir -p build
+        cp -R ./chart ./build
+        sed -i "s/%VERSION%/$VERSION/g" ./build/chart/Chart.yaml
+        curl -f -H 'Cache-Control: max-age=0,no-cache' "http://charts.jgreat.me/index.yaml" -o ./build/old-index.yaml
+
+    # - name: Build and publish image.
+    #   if: ${{ output.ahead == "true" }}
+    #   uses: elgohr/Publish-Docker-Github-Action@master
+    #   with:
+    #     name: jgreat/aws-cloud-controller-manager
+    #     username: ${{ secrets.DOCKER_USERNAME }}
+    #     password: ${{ secrets.DOCKER_PASSWORD }}
+    #     workdir: ./fork
+    #     buildoptions: --ulimit memlock=-1
+    #     tags: ${{ env.VERSION }},latest
+
+    # - name: Package chart.
+    #   if: ${{ output.ahead == "true" }}
+    #   uses: WyriHaximus/github-action-helm3@master
+    #   with:
+    #     exec: helm package -d ./build/package ./build/chart
+
+    # - name: Create chart index.
+    #   if: ${{ output.ahead == "true" }}
+    #   uses: WyriHaximus/github-action-helm3@master
+    #   with:
+    #     exec: helm repo index --url http://charts.jgreat.me --merge ./build/old-index.yaml ./build/package
+
+    # - name: Upload to S3
+    #   if: ${{ output.ahead == "true" }}
+    #   uses: jakejarvis/s3-sync-action@master
+    #   with:
+    #     args: --acl public-read
+    #   env:
+    #     AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+    #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    #     AWS_REGION: us-east-2
+    #     SOURCE_DIR: ./build/package
+

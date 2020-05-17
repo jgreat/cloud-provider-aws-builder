@@ -47,9 +47,6 @@ jobs:
         cp -R ./chart ./build
         sed -i "s/%VERSION%/$VERSION/g" ./build/chart/Chart.yaml
         curl -f -H 'Cache-Control: max-age=0,no-cache' "http://charts.jgreat.me/index.yaml" -o ./build/old-index.yaml
-        git config --local user.email "jgreat@jgreat.me"
-        git config --local user.name "Jason Greathouse"
-        git commit -m "Add upstream changes" -a
 
     - name: Build and publish image
       if: steps.compare.outputs.ahead != ''

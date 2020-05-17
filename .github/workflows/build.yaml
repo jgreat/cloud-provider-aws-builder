@@ -3,7 +3,7 @@ name: Build AWS CCM Artifacts
 on:
   repository_dispatch: {}
   schedule:
-    - cron: "0 14 * * *"
+    - cron: "0 14 * * 1"
   push:
     branches:
       - master
@@ -50,7 +50,7 @@ jobs:
 
     - name: Build and publish image
       if: steps.compare.outputs.ahead != ''
-      uses: elgohr/Publish-Docker-Github-Action@master
+      uses: elgohr/Publish-Docker-Github-Action@2.15
       with:
         name: jgreat/aws-cloud-controller-manager
         username: ${{ secrets.DOCKER_USERNAME }}

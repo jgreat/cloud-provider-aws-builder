@@ -1,0 +1,27 @@
+# Default values for aws-ccm.
+
+image:
+  repository: jgreat/aws-cloud-controller-manager
+  pullPolicy: Always
+
+imagePullSecrets: []
+# nameOverride: ""
+# fullnameOverride: ""
+
+securityContext: {}
+
+resources: {}
+
+# Remove the node selector if you have a single node cluster.
+nodeSelector:
+  node-role.kubernetes.io/master: "true"
+
+tolerations:
+  - key: node.cloudprovider.kubernetes.io/uninitialized
+    value: "true"
+    effect: NoSchedule
+  - key: node-role.kubernetes.io/master
+    operator: Exists
+    effect: NoSchedule
+
+affinity: {}

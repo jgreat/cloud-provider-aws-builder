@@ -1,0 +1,6 @@
+apiVersion: v2
+name: aws-cloud-controller-manager
+description: Unofficial build of the out-of-tree AWS Cloud Controller Manager
+type: application
+version: %VERSION%
+appVersion: %VERSION%

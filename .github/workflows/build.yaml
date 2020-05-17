@@ -23,60 +23,73 @@ jobs:
     - name: checkout
       uses: actions/checkout@v2
 
-    - name: clone-and-compare
+    - name: Clone fork and compare
       id: compare
+      env:
+        GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
       run: |
-        git clone https://github.com/jgreat/cloud-provider-aws.git fork
-        cd fork
+        git clone https://$GH_ACCESS_TOKEN@github.com/jgreat/cloud-provider-aws.git fork
+        cd ./fork
         git remote add upstream https://github.com/kubernetes/cloud-provider-aws.git
         git pull upstream master
         echo "::set-output name=ahead::$(git status --porcelain -b | grep ahead || true)"
 
-    - name: setup-environment
+    - name: Setup environment
       if: steps.compare.outputs.ahead != ''
       run: |
-        cd fork
+        cd ./fork
         COMMIT_DATE=$(git --no-pager log -1 --format=%cd --date=format:%Y%m%d.%H%M%S)
         VERSION="0.0.0-$COMMIT_DATE"
+        echo $VERSION
         echo "::set-env name=VERSION::$VERSION"
-        cd -
+        cd ../
         mkdir -p build
         cp -R ./chart ./build
         sed -i "s/%VERSION%/$VERSION/g" ./build/chart/Chart.yaml
         curl -f -H 'Cache-Control: max-age=0,no-cache' "http://charts.jgreat.me/index.yaml" -o ./build/old-index.yaml
+        git config --local user.email "jgreat@jgreat.me"
+        git config --local user.name "Jason Greathouse"
+        git commit -m "Add upstream changes" -a
 
-    # - name: Build and publish image.
-    #   if: ${{ output.ahead == "true" }}
-    #   uses: elgohr/Publish-Docker-Github-Action@master
-    #   with:
-    #     name: jgreat/aws-cloud-controller-manager
-    #     username: ${{ secrets.DOCKER_USERNAME }}
-    #     password: ${{ secrets.DOCKER_PASSWORD }}
-    #     workdir: ./fork
-    #     buildoptions: --ulimit memlock=-1
-    #     tags: ${{ env.VERSION }},latest
+    - name: Build and publish image
+      if: steps.compare.outputs.ahead != ''
+      uses: elgohr/Publish-Docker-Github-Action@master
+      with:
+        name: jgreat/aws-cloud-controller-manager
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        workdir: ./fork
+        buildoptions: --ulimit memlock=-1
+        tags: ${{ env.VERSION }},latest
 
-    # - name: Package chart.
-    #   if: ${{ output.ahead == "true" }}
-    #   uses: WyriHaximus/github-action-helm3@master
-    #   with:
-    #     exec: helm package -d ./build/package ./build/chart
+    - name: Package chart
+      if: steps.compare.outputs.ahead != ''
+      uses: WyriHaximus/github-action-helm3@master
+      with:
+        exec: helm package -d ./build/package ./build/chart
 
-    # - name: Create chart index.
-    #   if: ${{ output.ahead == "true" }}
-    #   uses: WyriHaximus/github-action-helm3@master
-    #   with:
-    #     exec: helm repo index --url http://charts.jgreat.me --merge ./build/old-index.yaml ./build/package
+    - name: Create chart index
+      if: steps.compare.outputs.ahead != ''
+      uses: WyriHaximus/github-action-helm3@master
+      with:
+        exec: helm repo index --url http://charts.jgreat.me --merge ./build/old-index.yaml ./build/package
 
-    # - name: Upload to S3
-    #   if: ${{ output.ahead == "true" }}
-    #   uses: jakejarvis/s3-sync-action@master
-    #   with:
-    #     args: --acl public-read
-    #   env:
-    #     AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-    #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    #     AWS_REGION: us-east-2
-    #     SOURCE_DIR: ./build/package
+    - name: Upload to S3
+      if: steps.compare.outputs.ahead != ''
+      uses: jakejarvis/s3-sync-action@master
+      with:
+        args: --acl public-read
+      env:
+        AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: us-east-2
+        SOURCE_DIR: ./build/package
 
+    - name: Update Fork
+      if: steps.compare.outputs.ahead != ''
+      run: |
+        cd fork
+        git config --local user.email "jgreat@jgreat.me"
+        git config --local user.name "cloud-provider-aws-builder"
+        git push

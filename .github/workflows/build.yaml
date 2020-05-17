@@ -20,13 +20,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: checkout
+    - name: Checkout
       uses: actions/checkout@v2
 
     - name: Clone fork and compare
       id: compare
       env:
-        GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+        GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
       run: |
         git clone https://$GH_ACCESS_TOKEN@github.com/jgreat/cloud-provider-aws.git fork
         cd ./fork
@@ -71,17 +71,19 @@ jobs:
       with:
         exec: helm repo index --url http://charts.jgreat.me --merge ./build/old-index.yaml ./build/package
 
-    - name: Upload to S3
+    - name: Configure AWS credentials
       if: steps.compare.outputs.ahead != ''
-      uses: jakejarvis/s3-sync-action@master
+      uses: aws-actions/configure-aws-credentials@v1
       with:
-        args: --acl public-read
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-2
+
+    - name: Deploy to S3
+      if: steps.compare.outputs.ahead != ''
+      run: aws s3 sync ./build/package/ s3://$AWS_S3_BUCKET --acl public-read
       env:
-        AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: us-east-2
-        SOURCE_DIR: ./build/package
+        AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }
 
     - name: Update Fork
       if: steps.compare.outputs.ahead != ''

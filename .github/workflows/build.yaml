@@ -29,12 +29,10 @@ jobs:
         cd fork
         git remote add upstream https://github.com/kubernetes/cloud-provider-aws.git
         git pull upstream master
-        AHEAD=$(git status --porcelain -b | grep ahead || true)
-        echo "$AHEAD"
-        if [[ "$AHEAD" != "" ]]; then echo "::set-output name=ahead::yes"; fi
+        echo "::set-output name=ahead::$(git status --porcelain -b | grep ahead || true)"
 
     - name: setup-environment
-      if: steps.clone-and-compare.outputs.ahead == 'yes'
+      if: steps.clone-and-compare.outputs.ahead != ''
       run: |
         cd fork
         COMMIT_DATE=$(git --no-pager log -1 --format=%cd --date=format:%Y%m%d.%H%M%S)

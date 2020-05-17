@@ -83,7 +83,7 @@ jobs:
       if: steps.compare.outputs.ahead != ''
       run: aws s3 sync ./build/package/ s3://$AWS_S3_BUCKET --acl public-read
       env:
-        AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }
+        AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
 
     - name: Update Fork
       if: steps.compare.outputs.ahead != ''

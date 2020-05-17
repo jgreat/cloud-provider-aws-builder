@@ -34,7 +34,7 @@ jobs:
         if [[ "$AHEAD" != "" ]]; then echo "::set-output name=ahead::true"; fi
 
     - name: setup-environment
-      if: ${{ steps.clone-and-compare.outputs.ahead == "true" }}
+      if: ${{ steps.clone-and-compare.outputs.ahead == 'true' }}
       run: |
         cd fork
         COMMIT_DATE=$(git --no-pager log -1 --format=%cd --date=format:%Y%m%d.%H%M%S)

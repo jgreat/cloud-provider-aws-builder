@@ -38,7 +38,7 @@ jobs:
       if: steps.compare.outputs.ahead != ''
       run: |
         cd ./fork
-        COMMIT_DATE=$(git --no-pager log -1 --format=%cd --date=format:%Y%m%d.%H%M%S)
+        COMMIT_DATE=$(git --no-pager log -1 --format=%cd --date=format:%Y%m%d.T%H%M%S)
         VERSION="0.0.0-$COMMIT_DATE"
         echo $VERSION
         echo "::set-env name=VERSION::$VERSION"

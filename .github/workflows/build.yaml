@@ -50,7 +50,7 @@ jobs:
 
     - name: Build and publish image
       if: steps.compare.outputs.ahead != ''
-      uses: elgohr/Publish-Docker-Github-Action@2.15
+      uses: elgohr/Publish-Docker-Github-Action@2.19
       with:
         name: jgreat/aws-cloud-controller-manager
         username: ${{ secrets.DOCKER_USERNAME }}
